@@ -8,8 +8,6 @@ services:
     tty            : true
     ports:
       - 1221:3310
-    env_file:
-      - .env
     volumes:
       - .:/usr/src/KekikParty
     networks:
