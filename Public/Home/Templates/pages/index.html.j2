@@ -161,5 +161,6 @@
     <script>
         // Room configuration (global for ES6 modules)
         window.ROOM_ID = "{{ room_id }}";
+        window.PROXY_ENABLED = {{ proxy_enabled | tojson }};
     </script>
 {% endblock %}

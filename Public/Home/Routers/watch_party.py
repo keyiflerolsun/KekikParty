@@ -3,6 +3,7 @@
 from Core                  import Request, HTMLResponse
 from .                     import home_router, home_template
 from Public.WebSocket.Libs import watch_party_manager
+from Settings              import PROXY_ENABLED
 
 @home_router.get("/watch-party/{room_id}", response_class=HTMLResponse)
 async def watch_party_room(request: Request, room_id: str):
@@ -13,12 +14,13 @@ async def watch_party_room(request: Request, room_id: str):
     room = await watch_party_manager.get_room(room_id)
 
     context = {
-        "request"     : request,
-        "site_name"   : "Watch Party",
-        "title"       : f"Watch Party - Oda: {room_id}",
-        "description" : "Birlikte video izle! YouTube, M3U/HLS ve daha fazlası.",
-        "room_id"     : room_id,
-        "room"        : room,
+        "request"       : request,
+        "site_name"     : "Watch Party",
+        "title"         : f"Watch Party - Oda: {room_id}",
+        "description"   : "Birlikte video izle! YouTube, M3U/HLS ve daha fazlası.",
+        "room_id"       : room_id,
+        "room"          : room,
+        "proxy_enabled" : PROXY_ENABLED,
     }
 
     return home_template.TemplateResponse("pages/index.html.j2", context)
