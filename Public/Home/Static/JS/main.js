@@ -200,6 +200,37 @@ const setupGlobalActions = () => {
             btn.classList.toggle('active', isVisible);
         }
     };
+
+    // Export room as shareable link
+    window.exportRoom = async () => {
+        const url = document.getElementById('video-url-input')?.value.trim() || '';
+        if (!url) {
+            showToast("Önce bir video URL'si girin", 'warning');
+            return;
+        }
+
+        const { roomId } = getRoomConfig();
+        const userAgent = document.getElementById('custom-user-agent')?.value.trim() || '';
+        const referer = document.getElementById('custom-referer')?.value.trim() || '';
+        const subtitle = document.getElementById('subtitle-url')?.value.trim() || '';
+
+        // Build shareable URL with current room ID
+        const params = new URLSearchParams();
+        params.append('url', url);
+        if (userAgent) params.append('user_agent', userAgent);
+        if (referer) params.append('referer', referer);
+        if (subtitle) params.append('subtitle', subtitle);
+
+        const shareUrl = `${window.location.origin}/watch-party/${roomId}?${params.toString()}`;
+
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            showToast('Oda linki kopyalandı!', 'success');
+        } catch {
+            // Fallback: show in prompt
+            prompt('Oda linki:', shareUrl);
+        }
+    };
 };
 
 // ============== Initialize ==============
@@ -228,6 +259,49 @@ const init = async () => {
             username: state.currentUser.username,
             avatar: state.currentUser.avatar
         });
+
+        // Autoload video if parameters exist
+        if (window.AUTOLOAD?.url) {
+            const { url, title, user_agent, referer, subtitle } = window.AUTOLOAD;
+            
+            // Show input container
+            const inputContainer = document.getElementById('video-input-container');
+            if (inputContainer) {
+                inputContainer.style.display = '';
+                // Toggle button'u aktif yap
+                const toggleBtn = document.querySelector('.controls-toggle');
+                if (toggleBtn) toggleBtn.classList.add('active');
+            }
+            
+            // Fill form inputs
+            const urlInput = document.getElementById('video-url-input');
+            const uaInput = document.getElementById('custom-user-agent');
+            const refInput = document.getElementById('custom-referer');
+            const subInput = document.getElementById('subtitle-url');
+
+            if (urlInput) urlInput.value = url;
+            if (uaInput && user_agent) uaInput.value = user_agent;
+            if (refInput && referer) refInput.value = referer;
+            if (subInput && subtitle) subInput.value = subtitle;
+
+            // Show advanced options if any advanced field is filled
+            if (user_agent || referer || subtitle) {
+                const advancedOptions = document.getElementById('advanced-options');
+                if (advancedOptions) advancedOptions.style.display = '';
+            }
+
+            // Trigger video change after small delay (wait for room state)
+            setTimeout(() => {
+                showSkeleton('player-container');
+                send('video_change', { 
+                    url, 
+                    title: title || '', 
+                    user_agent: user_agent || '', 
+                    referer: referer || '', 
+                    subtitle_url: subtitle || '' 
+                });
+            }, 500);
+        }
     } catch (e) {
         console.error('Connection failed:', e);
     }

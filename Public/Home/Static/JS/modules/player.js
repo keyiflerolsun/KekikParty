@@ -299,6 +299,10 @@ export const loadVideo = async (url, format = 'hls', headers = {}, title = '', s
 
     state.playerState = PlayerState.LOADING;
     
+    // Hide export button until video loads successfully
+    const exportBtn = document.getElementById('export-room-btn');
+    if (exportBtn) exportBtn.style.display = 'none';
+    
     // Cleanup
     if (state.hls) {
         state.hls.destroy();
@@ -361,6 +365,12 @@ export const loadVideo = async (url, format = 'hls', headers = {}, title = '', s
 
     state.lastLoadedUrl = url;
     state.playerState = success ? PlayerState.READY : PlayerState.IDLE;
+    
+    // Show export button if video loaded successfully
+    if (success) {
+        const exportBtn = document.getElementById('export-room-btn');
+        if (exportBtn) exportBtn.style.display = '';
+    }
     
     return success;
 };

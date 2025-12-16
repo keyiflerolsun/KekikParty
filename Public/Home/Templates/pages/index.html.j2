@@ -48,6 +48,10 @@
                         <i class="fa-solid fa-play"></i>
                         Oynat
                     </button>
+                    <button class="wp-btn wp-btn-secondary" id="export-room-btn" onclick="exportRoom()" title="Oda linkini oluştur" style="display: none;">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        Export
+                    </button>
                 </div>
                 
                 <!-- Advanced Options Toggle -->
@@ -162,5 +166,8 @@
         // Room configuration (global for ES6 modules)
         window.ROOM_ID = "{{ room_id }}";
         window.PROXY_ENABLED = {{ proxy_enabled | tojson }};
+        {% if autoload %}
+        window.AUTOLOAD = {{ autoload | tojson }};
+        {% endif %}
     </script>
 {% endblock %}
