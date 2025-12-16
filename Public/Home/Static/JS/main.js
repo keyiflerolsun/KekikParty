@@ -49,19 +49,23 @@ const setupMessageHandlers = () => {
 
 const handleRoomState = async (roomState) => {
     updateUsersList(roomState.users);
-    setProcessingRemote(true);
 
     if (roomState.video_url) {
         const shouldLoad = getLastLoadedUrl() !== roomState.video_url;
 
         if (shouldLoad) {
+            setProcessingRemote(true);
             await loadVideo(roomState.video_url, roomState.video_format, roomState.headers, roomState.video_title, roomState.subtitle_url);
 
-            // Wait for metadata before applying state
+            // Wait for metadata before applying state (with short timeout)
             const videoPlayer = document.getElementById('video-player');
-            if (videoPlayer) {
+            if (videoPlayer && videoPlayer.readyState < 1) {
                 await new Promise(resolve => {
-                    videoPlayer.addEventListener('loadedmetadata', resolve, { once: true });
+                    const timeout = setTimeout(resolve, 2000); // 2s timeout
+                    videoPlayer.addEventListener('loadedmetadata', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    }, { once: true });
                 });
             }
         }
@@ -69,8 +73,6 @@ const handleRoomState = async (roomState) => {
         // Sync callback for continuous syncing while waiting for user interaction
         const requestSync = () => send('get_state');
         await applyState(roomState, requestSync);
-    } else {
-        setProcessingRemote(false);
     }
 
     if (roomState.chat_messages) {

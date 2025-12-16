@@ -369,6 +369,15 @@ export const showInteractionPrompt = (localOnInteract = null, localOnSyncRequest
     }
 
     const handleClick = async () => {
+        console.log('[OVERLAY] Click detected!');
+        console.log('[OVERLAY] Video state:', {
+            src: videoPlayer.src,
+            readyState: videoPlayer.readyState,
+            networkState: videoPlayer.networkState,
+            paused: videoPlayer.paused,
+            currentTime: videoPlayer.currentTime
+        });
+        
         // Stop syncing
         if (syncInterval) {
             clearInterval(syncInterval);
@@ -378,21 +387,35 @@ export const showInteractionPrompt = (localOnInteract = null, localOnSyncRequest
         state.isProcessingRemote = true;
         playerOverlay.removeEventListener('click', handleClick);
         
+        // Hide overlay immediately on click
+        playerOverlay.classList.add('hidden');
+        
         try {
-            // Start playback
-            state.playPromise = videoPlayer.play();
-            await state.playPromise;
-            state.playPromise = null;
-            playerOverlay.classList.add('hidden');
+            console.log('[OVERLAY] Attempting to play...');
             
-            // Trigger post-interaction logic (progressive sync etc.) from main.js
+            // Play with timeout
+            const playPromise = videoPlayer.play();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Play timeout')), 3000)
+            );
+            
+            state.playPromise = playPromise;
+            await Promise.race([playPromise, timeoutPromise]);
+            state.playPromise = null;
+            console.log('[OVERLAY] Play successful!');
+            
+            // Trigger post-interaction logic
             if (onInteract) {
                 await onInteract();
             }
         } catch (e) {
             state.playPromise = null;
-            if (e.name !== 'AbortError') {
-                console.error('Play error:', e);
+            console.error('[OVERLAY] Play error:', e);
+            
+            if (e.message === 'Play timeout') {
+                showToast('Video yüklenemedi, tekrar deneyin', 'warning');
+            } else if (e.name !== 'AbortError') {
+                showToast('Oynatma hatası: ' + e.message, 'error');
             }
         }
         
@@ -400,6 +423,7 @@ export const showInteractionPrompt = (localOnInteract = null, localOnSyncRequest
     };
 
     playerOverlay.addEventListener('click', handleClick);
+    console.log('[OVERLAY] Prompt shown, click handler attached');
 };
 
 export const applyState = async (serverState, customOptions = {}) => {
@@ -465,8 +489,18 @@ export const applyState = async (serverState, customOptions = {}) => {
 };
 
 export const handleSync = async (msg, options = {}) => {
-    const { videoPlayer } = state;
+    const { videoPlayer, playerOverlay } = state;
     if (!videoPlayer) return;
+
+    // Overlay görünürse sadece zamanı güncelle, play/pause yapma
+    const overlayVisible = playerOverlay && !playerOverlay.classList.contains('hidden');
+    
+    if (overlayVisible) {
+        // Sadece zamanı güncelle, kullanıcı tıkladığında doğru zamandan başlasın
+        videoPlayer.currentTime = msg.current_time;
+        logger.sync(`Time updated (waiting interaction): ${msg.current_time.toFixed(1)}s`);
+        return;
+    }
 
     state.isProcessingRemote = true;
     const timeDiff = Math.abs(videoPlayer.currentTime - msg.current_time);
@@ -520,8 +554,22 @@ export const handleSeek = (msg) => {
 };
 
 export const handleSyncCorrection = async (msg) => {
-    const { videoPlayer } = state;
-    if (!videoPlayer || state.isProcessingRemote) return;
+    const { videoPlayer, playerOverlay } = state;
+    if (!videoPlayer) return;
+
+    // Overlay görünürse kullanıcı henüz etkileşim yapmamış, sync correction atlat
+    if (playerOverlay && !playerOverlay.classList.contains('hidden')) {
+        logger.sync('Skipped - waiting for user interaction');
+        return;
+    }
+
+    logger.sync(`action=${msg.action}, drift=${msg.drift?.toFixed(2)}s, isProcessingRemote=${state.isProcessingRemote}`);
+
+    // isProcessingRemote true ise tüm sync correction'ları atla
+    if (state.isProcessingRemote) {
+        logger.sync('Skipped - isProcessingRemote is true');
+        return;
+    }
 
     if (msg.action === 'rate') {
         const rate = msg.rate || 1.0;
@@ -538,19 +586,34 @@ export const handleSyncCorrection = async (msg) => {
         logger.sync(`Buffer: Target=${msg.target_time.toFixed(1)}s (Drift: ${msg.drift.toFixed(2)}s)`);
         state.isProcessingRemote = true;
         
-        // Mock buffer effect
         try {
+            // Önce bekleyen play promise'i bekle
+            if (state.playPromise) {
+                try {
+                    await state.playPromise;
+                } catch (e) { /* ignore */ }
+                state.playPromise = null;
+            }
+            
             videoPlayer.pause();
             showToast('Senkronize ediliyor...', 'warning');
             
             videoPlayer.currentTime = msg.target_time;
             
-            // Wait a bit to simulate buffer/catch up
-            await sleep(1000);
+            // Seek tamamlanana kadar bekle
+            await new Promise(resolve => {
+                videoPlayer.addEventListener('seeked', resolve, { once: true });
+                setTimeout(resolve, 500); // Timeout fallback
+            });
             
-            await videoPlayer.play();
+            state.playPromise = videoPlayer.play();
+            await state.playPromise;
+            state.playPromise = null;
         } catch (e) {
-            console.error('Sync correction error:', e);
+            state.playPromise = null;
+            if (e.name !== 'AbortError') {
+                console.error('Sync correction error:', e);
+            }
         }
         
         state.isProcessingRemote = false;

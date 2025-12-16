@@ -11,3 +11,4 @@ user_agents
 PyYAML
 Jinja2
 python-multipart
+yt-dlp
