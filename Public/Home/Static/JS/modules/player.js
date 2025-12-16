@@ -84,7 +84,7 @@ export const setupVideoEventListeners = () => {
 
     videoPlayer.addEventListener('playing', () => {
         if (state.playerState === PlayerState.WAITING_INTERACTION) return;
-        callbacks.onBufferEnd?.();;
+        callbacks.onBufferEnd?.();
     });
 };
 
@@ -465,7 +465,6 @@ export const handleSyncCorrection = async (msg) => {
 export const getCurrentTime = () => state.videoPlayer?.currentTime || 0;
 export const isPlaying = () => state.playerState === PlayerState.PLAYING;
 export const getLastLoadedUrl = () => state.lastLoadedUrl;
-export const getPlayerState = () => state.playerState;
 
 // ============== Setters ==============
 export const updateVideoInfo = (title, duration) => {

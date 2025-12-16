@@ -16,7 +16,6 @@ import {
     getCurrentTime,
     isPlaying,
     getLastLoadedUrl,
-    getPlayerState,
     updateVideoInfo
 } from './modules/player.js';
 import { connect, send, onMessage, setHeartbeatDataProvider } from './modules/websocket.js';
