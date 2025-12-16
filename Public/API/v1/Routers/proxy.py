@@ -5,18 +5,17 @@ from fastapi              import Request, Response
 from starlette.background import BackgroundTask
 from fastapi.responses    import StreamingResponse
 from .                    import api_v1_router
-from ..Libs.helpers       import parse_custom_headers, prepare_request_headers, prepare_response_headers, detect_hls_from_url, stream_wrapper, process_subtitle_content, CORS_HEADERS
+from ..Libs.helpers       import prepare_request_headers, prepare_response_headers, detect_hls_from_url, stream_wrapper, process_subtitle_content, CORS_HEADERS
 from urllib.parse         import unquote
 import httpx
 
 @api_v1_router.get("/proxy/video")
 @api_v1_router.head("/proxy/video")
-async def video_proxy(request: Request, url: str, referer: str = None, user_agent: str = None, headers: str = None):
+async def video_proxy(request: Request, url: str, referer: str = None, user_agent: str = None):
     """Video proxy endpoint'i"""
     decoded_url     = unquote(url)
-    custom_headers  = parse_custom_headers(headers)
-    request_headers = prepare_request_headers(request, decoded_url, referer, user_agent, custom_headers)
-    
+    request_headers = prepare_request_headers(request, decoded_url, referer, user_agent)
+
     # Client oluştur
     client = httpx.AsyncClient(
         follow_redirects = True,
@@ -66,12 +65,11 @@ async def video_proxy(request: Request, url: str, referer: str = None, user_agen
 
 
 @api_v1_router.get("/proxy/subtitle")
-async def subtitle_proxy(request: Request, url: str, referer: str = None, user_agent: str = None, headers: str = None):
+async def subtitle_proxy(request: Request, url: str, referer: str = None, user_agent: str = None):
     """Altyazı proxy endpoint'i"""
     try:
         decoded_url     = unquote(url)
-        custom_headers  = parse_custom_headers(headers)
-        request_headers = prepare_request_headers(request, decoded_url, referer, user_agent, custom_headers)
+        request_headers = prepare_request_headers(request, decoded_url, referer, user_agent)
         
         async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
             response = await client.get(decoded_url, headers=request_headers)

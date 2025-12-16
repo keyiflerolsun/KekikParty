@@ -3,7 +3,7 @@
 from CLI          import konsol
 from fastapi      import Request
 from urllib.parse import unquote
-import httpx, json, traceback
+import httpx, traceback
 
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5)"
 DEFAULT_REFERER    = "https://twitter.com/"
@@ -23,16 +23,6 @@ CORS_HEADERS = {
     "Access-Control-Allow-Headers" : "Origin, Content-Type, Accept, Range",
 }
 
-def parse_custom_headers(headers_str: str | None) -> dict:
-    """JSON string headerları dict'e çevirir"""
-    if not headers_str:
-        return {}
-    try:
-        return json.loads(headers_str)
-    except json.JSONDecodeError as e:
-        konsol.print(f"[yellow]Header parsing hatası: {str(e)}[/yellow]")
-        return {}
-
 def get_content_type(url: str, response_headers: dict) -> str:
     """URL ve response headers'dan content-type belirle"""
     # 1. Response header kontrolü
@@ -48,36 +38,24 @@ def get_content_type(url: str, response_headers: dict) -> str:
     # 3. Varsayılan
     return "video/mp4"
 
-def prepare_request_headers(request: Request, url: str, referer: str | None, user_agent: str | None, custom_headers: dict) -> dict:
+def prepare_request_headers(request: Request, url: str, referer: str | None, user_agent: str | None) -> dict:
     """Proxy isteği için headerları hazırlar"""
     headers = {
-        "User-Agent"      : user_agent or custom_headers.get("User-Agent", DEFAULT_USER_AGENT),
         "Accept"          : "*/*",
         "Accept-Encoding" : "identity",
         "Connection"      : "keep-alive",
     }
     
-    # Range header transferi
-    if range_header := request.headers.get("Range"):
-        headers["Range"] = range_header
-    
+    # User-Agent ayarı
+    if user_agent and user_agent != "None":
+        headers["User-Agent"] = user_agent
+    else:
+        headers["User-Agent"] = DEFAULT_USER_AGENT
+        
     # Referer ayarı
     if referer and referer != "None":
         headers["Referer"] = unquote(referer)
-    elif "Referer" not in headers:
-        # Smart Referer: URL'den domaini al
-        from urllib.parse import urlparse
-        try:
-            parsed = urlparse(url)
-            headers["Referer"] = f"{parsed.scheme}://{parsed.netloc}/"
-        except:
-            headers["Referer"] = DEFAULT_REFERER
-    
-    # Custom headerları ekle (varsa üzerine yazar)
-    for key, value in custom_headers.items():
-        if key not in headers:
-            headers[key] = value
-            
+
     return headers
 
 def prepare_response_headers(response_headers: dict, url: str, detected_content_type: str = None) -> dict:

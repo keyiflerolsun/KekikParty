@@ -3,7 +3,6 @@
 from .ytdlp_service import YTDLPService
 from .helpers       import (
     CORS_HEADERS,
-    parse_custom_headers,
     prepare_request_headers,
     prepare_response_headers,
     detect_hls_from_url,

@@ -4,7 +4,7 @@ from CLI     import konsol
 from fastapi import WebSocket, WebSocketDisconnect
 from .       import wss_router
 from ..Libs  import MessageHandler
-import json
+import json, asyncio
 
 @wss_router.websocket("/watch_party/{room_id}")
 async def watch_party_websocket(websocket: WebSocket, room_id: str):
@@ -41,7 +41,7 @@ async def watch_party_websocket(websocket: WebSocket, room_id: str):
                 await handler.handle_chat(message)
 
             elif msg_type == "video_change" and handler.user:
-                await handler.handle_video_change(message)
+                asyncio.create_task(handler.handle_video_change(message))
 
             elif msg_type == "ping":
                 await handler.handle_ping(message)
