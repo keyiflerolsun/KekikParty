@@ -12,12 +12,12 @@ import {
     applyState,
     handleSync,
     handleSeek,
+    handleSyncCorrection,
     getCurrentTime,
     isPlaying,
     getLastLoadedUrl,
-    setProcessingRemote,
-    updateVideoInfo,
-    handleSyncCorrection
+    getPlayerState,
+    updateVideoInfo
 } from './modules/player.js';
 import { connect, send, onMessage, setHeartbeatDataProvider } from './modules/websocket.js';
 
@@ -54,25 +54,16 @@ const handleRoomState = async (roomState) => {
         const shouldLoad = getLastLoadedUrl() !== roomState.video_url;
 
         if (shouldLoad) {
-            setProcessingRemote(true);
-            await loadVideo(roomState.video_url, roomState.video_format, roomState.headers, roomState.video_title, roomState.subtitle_url);
-
-            // Wait for metadata before applying state (with short timeout)
-            const videoPlayer = document.getElementById('video-player');
-            if (videoPlayer && videoPlayer.readyState < 1) {
-                await new Promise(resolve => {
-                    const timeout = setTimeout(resolve, 2000); // 2s timeout
-                    videoPlayer.addEventListener('loadedmetadata', () => {
-                        clearTimeout(timeout);
-                        resolve();
-                    }, { once: true });
-                });
-            }
+            await loadVideo(
+                roomState.video_url, 
+                roomState.video_format, 
+                roomState.headers, 
+                roomState.video_title, 
+                roomState.subtitle_url
+            );
         }
 
-        // Sync callback for continuous syncing while waiting for user interaction
-        const requestSync = () => send('get_state');
-        await applyState(roomState, requestSync);
+        await applyState(roomState);
     }
 
     if (roomState.chat_messages) {
@@ -96,7 +87,6 @@ const handleChatMessage = (msg) => {
 };
 
 const handleVideoChanged = async (msg) => {
-    // Show skeleton for all users while video loads
     showSkeleton('player-container');
     await loadVideo(msg.url, msg.format, msg.headers, msg.title, msg.subtitle_url);
     updateVideoInfo(msg.title, msg.duration);
@@ -112,8 +102,7 @@ const setupPlayerCallbacks = () => {
         onSeek: (time) => send('seek', { time }),
         onBufferStart: () => send('buffer_start'),
         onBufferEnd: () => send('buffer_end'),
-        onSyncRequest: () => send('get_state'),
-        onInteractionSuccess: async () => { send('get_state'); }
+        onSyncRequest: () => send('get_state')
     });
 };
 
@@ -143,7 +132,6 @@ const setupGlobalActions = () => {
             return;
         }
 
-        // Show skeleton on player while loading
         showSkeleton('player-container');
         send('video_change', { url, user_agent: userAgent, referer, subtitle_url: subtitleUrl });
         if (urlInput) urlInput.value = '';
