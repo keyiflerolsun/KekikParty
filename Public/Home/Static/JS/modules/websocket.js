@@ -1,7 +1,7 @@
 // Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 import { sleep } from './utils.js';
-import { showToast, updateSyncStatus, showConnectionModal, hideConnectionModal } from './ui.js';
+import { showToast, updateSyncStatus, showConnectionModal, hideConnectionModal, updatePing } from './ui.js';
 
 // ============== Config ==============
 const config = {
@@ -18,6 +18,10 @@ const state = {
     heartbeatInterval: null,
     getHeartbeatData: null
 };
+
+// Ping tracking
+state.pingCounter = 0;
+state.pendingPings = new Map();
 
 // ============== Message Handlers ==============
 const messageHandlers = new Map();
@@ -79,7 +83,33 @@ export const connect = async (url) => {
 };
 
 const handleMessage = (message) => {
-    if (message.type === 'pong') return;
+    if (message.type === 'pong') {
+        // Expect `_ping_id` to match an outstanding ping
+        const id = message._ping_id;
+        if (id && state.pendingPings.has(id)) {
+            const sent = state.pendingPings.get(id);
+            const rtt = Date.now() - sent;
+            state.pendingPings.delete(id);
+            try { updatePing(rtt); } catch (e) { /* ignore UI errors */ }
+            return;
+        }
+
+        // Fallback: if server returned a bare pong (no id), match the oldest pending ping
+        if (state.pendingPings.size > 0) {
+            const oldest = [...state.pendingPings.entries()].sort((a, b) => a[1] - b[1])[0];
+            if (oldest) {
+                const [oldId, sent] = oldest;
+                const rtt = Date.now() - sent;
+                state.pendingPings.delete(oldId);
+                try { updatePing(rtt); } catch (e) { /* ignore UI errors */ }
+                return;
+            }
+        }
+
+        // If nothing to match, show no-value
+        try { updatePing(null); } catch (e) {}
+        return;
+    }
 
     const handler = messageHandlers.get(message.type);
     if (handler) {
@@ -100,7 +130,15 @@ const startHeartbeat = () => {
     state.heartbeatInterval = setInterval(() => {
         if (state.ws?.readyState === WebSocket.OPEN) {
             const payload = state.getHeartbeatData?.() || {};
-            send('ping', payload);
+            // create a ping id and record timestamp
+            const id = ++state.pingCounter;
+            state.pendingPings.set(id, Date.now());
+            send('ping', { ...payload, _ping_id: id });
+            // cleanup very old pings
+            const now = Date.now();
+            for (const [k, ts] of state.pendingPings.entries()) {
+                if (now - ts > 10000) state.pendingPings.delete(k);
+            }
         }
     }, config.heartbeatInterval);
 };

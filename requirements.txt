@@ -3,7 +3,7 @@ curl_cffi
 httpx
 fastapi
 uvicorn
-uvloop
+uvloop; sys_platform != "win32"
 httptools
 gunicorn
 websockets
@@ -12,3 +12,4 @@ PyYAML
 Jinja2
 python-multipart
 yt-dlp
+ipaddress

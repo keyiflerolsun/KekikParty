@@ -96,6 +96,21 @@ body {
     gap: 1rem;
 }
 
+/* Ping display (sağ üst) */
+.wp-ping-display {
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--wp-border);
+    background: var(--wp-bg-input);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.wp-ping-display.good { color: var(--wp-success); }
+.wp-ping-display.warn { color: var(--wp-warning); }
+.wp-ping-display.bad { color: var(--wp-error); }
+
 .wp-logo {
     display: flex;
     align-items: center;

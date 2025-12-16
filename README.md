@@ -38,7 +38,7 @@ Windows:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+powershell .\.venv\Scripts\Activate.ps1
 ```
 
 Linux / macOS:
@@ -75,7 +75,7 @@ python basla.py
 - Docker kullanmak için:
 
 ```bash
-docker-compose up --build
+docker compose -f "docker-compose.yml" up -d --build "kekikparty""
 ```
 
 - `docker-compose.yml` dosyasında servis `kekikparty` için port yönlendirmesi `1221:3310` olarak tanımlıdır; bu durumda uygulamaya `http://localhost:1221` adresinden ulaşabilirsiniz.

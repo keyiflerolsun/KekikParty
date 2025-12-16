@@ -11,6 +11,19 @@ const state = {
 export const initUI = () => {
     state.toastContainer = document.getElementById('toast-container');
     state.connectionModal = document.getElementById('connection-modal');
+    // Ping display (sağ üst)
+    state.pingDisplay = document.getElementById('ping-display');
+    if (!state.pingDisplay) {
+        const headerRight = document.querySelector('.wp-header-right');
+        if (headerRight) {
+            const el = document.createElement('div');
+            el.id = 'ping-display';
+            el.className = 'wp-online-count wp-ping-display';
+            el.innerHTML = `<i class="fa-solid fa-wave-square"></i><span>-- ms</span>`;
+            headerRight.appendChild(el);
+            state.pingDisplay = el;
+        }
+    }
 };
 
 export const showToast = (message, type = 'info') => {
@@ -66,6 +79,30 @@ export const updateSyncStatus = (status) => {
     const config = statusMap[status] || statusMap.connecting;
     if (config.class) syncStatus.classList.add(config.class);
     syncStatus.innerHTML = config.html;
+};
+
+export const updatePing = (ms) => {
+    if (!state.pingDisplay) return;
+    const span = state.pingDisplay.querySelector('span');
+
+    // Null/undefined means no measured value
+    if (ms == null) {
+        if (span) span.textContent = `-- ms`;
+        state.pingDisplay.classList.remove('good', 'warn', 'bad');
+        return;
+    }
+
+    const rounded = Math.max(0, Math.round(ms));
+    if (span) span.textContent = `${rounded} ms`;
+
+    state.pingDisplay.classList.remove('good', 'warn', 'bad');
+    if (rounded < 100) {
+        state.pingDisplay.classList.add('good');
+    } else if (rounded < 200) {
+        state.pingDisplay.classList.add('warn');
+    } else {
+        state.pingDisplay.classList.add('bad');
+    }
 };
 
 export const updateSyncInfoText = (username, action) => {
