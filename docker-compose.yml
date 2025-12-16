@@ -1,20 +1,31 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-networks:
-  local:
-    driver: bridge
-
 services:
-  KekikParty:
+  kekikparty:
+    build: .
     container_name : KekikParty
-    image          : KekikParty:local
+    restart        : unless-stopped
     tty            : true
-    restart        : always
-    build          : .
-
+    ports:
+      - 1221:3310
+    env_file:
+      - .env
     volumes:
       - .:/usr/src/KekikParty
     networks:
-      - local
-    ports:
-      - 1221:3310
+      - kekikparty
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3310/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  kekikparty:
+    driver: bridge
