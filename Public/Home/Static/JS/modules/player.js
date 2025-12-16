@@ -178,7 +178,7 @@ const loadHls = (url, headers = {}, useProxy = false) => {
                     }
 
                     // Proxy URL oluştur - Headers closure'dan geliyor
-                    logger.video(`HLS Segment: ${targetUrl}`);
+                    // logger.video(`HLS Segment: ${targetUrl}`);
                     const proxyUrl = buildProxyUrl(targetUrl, headers, 'video');
                     xhr.open('GET', proxyUrl, true);
                     
