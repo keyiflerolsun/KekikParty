@@ -405,9 +405,13 @@ export const showInteractionPrompt = () => {
         }, 1000);
     }
 
-    const handleClick = async () => {
+    const handleClick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         stopSyncInterval();
         playerOverlay.removeEventListener('click', handleClick);
+        playerOverlay.removeEventListener('touchend', handleClick);
         playerOverlay.classList.add('hidden');
         
         state.isSyncing = true;  // Prevent event broadcasts
@@ -427,6 +431,7 @@ export const showInteractionPrompt = () => {
     };
 
     playerOverlay.addEventListener('click', handleClick);
+    playerOverlay.addEventListener('touchend', handleClick, { passive: false });
 };
 
 const stopSyncInterval = () => {
